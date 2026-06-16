@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15202B">
+<title>Turni</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15202B;
+    --paper:#EEF1F6;
+    --surface:#FFFFFF;
+    --muted:#5B6472;
+    --accent:#D98E04;
+    --accent-soft:#FBE6BC;
+    --teal:#2F6F62;
+    --border:#D7DCE3;
+    --weekend-bg:#E2E7EE;
+    --danger:#C0392B;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  /* ---------- Header / "departure board" ---------- */
+  .board{
+    background:var(--ink);
+    color:#F4EFE3;
+    padding:18px clamp(14px,4vw,32px) 14px;
+  }
+  .board-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .board-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    letter-spacing:.04em;
+    font-size:clamp(20px,4vw,28px);
+    color:#fff;
+  }
+  .board-title span{color:var(--accent);}
+  .board-controls{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .board-controls button{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.18);
+    color:#F4EFE3;
+    width:32px;height:32px;
+    border-radius:8px;
+    font-size:16px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .board-controls button:hover{background:rgba(255,255,255,.16);}
+  .board-controls select{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.18);
+    color:var(--accent);
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:14px;
+    padding:7px 8px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .board-controls select option{color:#000;}
+  .ident-banner{
+    margin-top:12px;
+    font-size:13px;
+    padding:9px 14px;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .ident-banner.me{background:rgba(217,142,4,.18); color:#F4EFE3;}
+  .ident-banner.guest{background:rgba(255,255,255,.08); color:#CBD3DC;}
+  .ident-banner b{color:var(--accent);}
+
+  /* ---------- Layout ---------- */
+  main{padding:18px clamp(14px,4vw,32px);}
+  .setup-warning{
+    background:#FCEAEA;border:1px solid #E8B4B4;color:var(--danger);
+    padding:12px 16px;border-radius:var(--radius);margin-bottom:16px;font-size:14px;
+  }
+  .table-wrap{
+    background:var(--surface);
+    border-radius:var(--radius);
+    overflow:auto;
+    max-width:100%;
+    box-shadow:0 1px 3px rgba(21,32,43,.08);
+    border:1px solid var(--border);
+  }
+  table{border-collapse:separate;border-spacing:0;width:100%;}
+  th,td{
+    border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+    text-align:center;
+    padding:0;
+    white-space:nowrap;
+  }
+  thead th{
+    position:sticky;top:0;z-index:2;
+    background:var(--ink);
+    color:#F4EFE3;
+    padding:6px 4px;
+    font-weight:500;
+  }
+  thead th.corner{
+    left:0;z-index:4;
+    text-align:left;
+    padding:6px 12px;
+    font-family:'Space Grotesk',sans-serif;
+  }
+  thead th .wd{display:block;font-size:10px;color:#9AA6B2;text-transform:uppercase;letter-spacing:.04em;}
+  thead th .dn{display:block;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;}
+  thead th.weekend{background:#0E1620;}
+  thead th.today .dn{color:var(--accent);}
+  tbody th{
+    position:sticky;left:0;z-index:1;
+    background:var(--surface);
+    text-align:left;
+    padding:10px 12px;
+    font-weight:600;
+    font-size:13px;
+    box-shadow:1px 0 0 var(--border);
+    min-width:150px;
+  }
+  tbody th.me-row{background:var(--accent-soft);}
+  td.cell{
+    min-width:38px;height:40px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  td.weekend{background:var(--weekend-bg);color:#9AA6B2;}
+  td.today{box-shadow:inset 0 0 0 2px var(--accent);}
+  td.editable{cursor:pointer;}
+  td.editable:hover{outline:2px solid var(--teal);outline-offset:-2px;}
+  td.editable:active{filter:brightness(.95);}
+
+  /* ---------- Legend ---------- */
+  .legend{margin-top:20px;}
+  .legend h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px;}
+  .legend-list{display:flex;flex-wrap:wrap;gap:8px 14px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);}
+  .legend-swatch{width:14px;height:14px;border-radius:4px;flex:none;border:1px solid rgba(0,0,0,.08);}
+
+  /* ---------- Popover / bottom sheet ---------- */
+  .backdrop{
+    position:fixed;inset:0;background:rgba(21,32,43,.45);
+    opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;
+  }
+  .backdrop.open{opacity:1;pointer-events:auto;}
+  .sheet{
+    position:fixed;left:50%;bottom:0;
+    width:min(420px,100%);
+    transform:translate(-50%,100%);
+    transition:transform .25s ease;
+    background:var(--surface);
+    border-radius:16px 16px 0 0;
+    padding:18px 18px 24px;
+    z-index:11;
+    box-shadow:0 -4px 20px rgba(21,32,43,.2);
+  }
+  .sheet.open{transform:translate(-50%,0);}
+  .sheet-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .sheet-header h3{margin:0;font-size:15px;font-weight:600;}
+  .sheet-header button{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;}
+  .code-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .code-chip{
+    border:1px solid var(--border);border-radius:8px;padding:8px 12px;
+    font-size:13px;cursor:pointer;font-weight:600;color:var(--ink);
+    display:flex;align-items:center;gap:6px;
+  }
+  .code-chip .dot{width:10px;height:10px;border-radius:3px;}
+  .clear-btn{
+    width:100%;padding:10px;border-radius:8px;border:1px solid var(--danger);
+    color:var(--danger);background:none;font-weight:600;cursor:pointer;font-size:13px;
+  }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;bottom:18px;left:50%;transform:translate(-50%,12px);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;
+    font-size:13px;opacity:0;transition:all .2s;z-index:20;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+  .toast.error{background:var(--danger);}
+
+  @media (max-width:560px){
+    .board-title{font-size:20px;}
+    tbody th{min-width:120px;font-size:12px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="board">
+  <div class="board-row">
+    <div class="board-title">TURN<span>I</span></div>
+    <div class="board-controls">
+      <button id="prevMonth" aria-label="Mese precedente">‹</button>
+      <select id="meseSel"></select>
+      <select id="annoSel"></select>
+      <button id="nextMonth" aria-label="Mese successivo">›</button>
+    </div>
+  </div>
+  <div class="ident-banner" id="identBanner"></div>
+</header>
+
+<main>
+  <div id="setupWarning" class="setup-warning" style="display:none">
+    Configurazione incompleta: imposta <code>CONFIG.API_URL</code> nel file index.html con l'URL del tuo Web App di Google Apps Script.
+  </div>
+
+  <div class="table-wrap">
+    <table id="grid"></table>
+  </div>
+
+  <section class="legend">
+    <h2>Legenda codici</h2>
+    <div class="legend-list" id="legendList"></div>
+  </section>
+</main>
+
+<div class="backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-header">
+    <h3 id="sheetTitle">Seleziona turno</h3>
+    <button id="sheetClose" aria-label="Chiudi">×</button>
+  </div>
+  <div class="code-grid" id="codeGrid"></div>
+  <button class="clear-btn" id="clearBtn">Cancella turno di questo giorno</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIGURAZIONE — modifica solo questa riga dopo il deploy
+   dello script Apps Script (Distribuisci > Nuova implementazione)
+   ========================================================= */
+const CONFIG = {
+  API_URL: 'INSERISCI_QUI_URL_WEB_APP' // es: https://script.google.com/macros/s/XXXX/exec
+};
+
+const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const GIORNI_SETT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+
+const params = new URLSearchParams(location.search);
+const TOKEN = params.get('u') || '';
+
+const state = { anno:0, mese:0, dipendenti:[], codici:[], turni:{}, me:null };
+
+const $ = (sel) => document.querySelector(sel);
+
+function daysInMonth(anno, mese){ return new Date(anno, mese, 0).getDate(); }
+function isWeekend(anno, mese, day){ const d = new Date(anno, mese-1, day).getDay(); return d===0 || d===6; }
+function weekdayLabel(anno, mese, day){ return GIORNI_SETT[new Date(anno, mese-1, day).getDay()]; }
+function isToday(anno, mese, day){
+  const t = new Date();
+  return t.getFullYear()===anno && (t.getMonth()+1)===mese && t.getDate()===day;
+}
+
+function buildSelectors(){
+  const meseSel = $('#meseSel');
+  meseSel.innerHTML = MESI.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  const annoSel = $('#annoSel');
+  const y = new Date().getFullYear();
+  const years = [y-1,y,y+1,y+2];
+  annoSel.innerHTML = years.map(a=>`<option value="${a}">${a}</option>`).join('');
+  meseSel.value = state.mese;
+  annoSel.value = state.anno;
+  meseSel.addEventListener('change', ()=>{ state.mese = parseInt(meseSel.value,10); loadData(); });
+  annoSel.addEventListener('change', ()=>{ state.anno = parseInt(annoSel.value,10); loadData(); });
+  $('#prevMonth').addEventListener('click', ()=>{
+    state.mese--; if(state.mese<1){state.mese=12; state.anno--;}
+    meseSel.value=state.mese; annoSel.value=state.anno; loadData();
+  });
+  $('#nextMonth').addEventListener('click', ()=>{
+    state.mese++; if(state.mese>12){state.mese=1; state.anno++;}
+    meseSel.value=state.mese; annoSel.value=state.anno; loadData();
+  });
+}
+
+function codiceColor(codice){
+  const c = state.codici.find(c=>c.codice===codice);
+  return c ? c.colore : '#E5E7EB';
+}
+
+function renderIdentBanner(){
+  const el = $('#identBanner');
+  if (state.me){
+    el.className = 'ident-banner me';
+    el.innerHTML = `Stai modificando i turni di <b>${state.me}</b> — tocca una tua cella per cambiare il turno.`;
+  } else {
+    el.className = 'ident-banner guest';
+    el.innerHTML = `Modalità sola lettura. Per modificare i tuoi turni usa il link personale ricevuto dal responsabile.`;
+  }
+}
+
+function renderLegend(){
+  $('#legendList').innerHTML = state.codici.map(c=>`
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:${c.colore}"></span>
+      <strong>${c.codice}</strong>&nbsp;${c.descrizione}
+    </div>
+  `).join('');
+}
+
+function renderGrid(){
+  const nDays = daysInMonth(state.anno, state.mese);
+  const table = $('#grid');
+
+  let thead = '<thead><tr><th class="corner">Dipendente</th>';
+  for (let d=1; d<=nDays; d++){
+    const weekend = isWeekend(state.anno, state.mese, d);
+    const today = isToday(state.anno, state.mese, d);
+    thead += `<th class="${weekend?'weekend':''} ${today?'today':''}">
+        <span class="wd">${weekdayLabel(state.anno,state.mese,d)}</span>
+        <span class="dn">${d}</span>
+      </th>`;
+  }
+  thead += '</tr></thead>';
+
+  let tbody = '<tbody>';
+  state.dipendenti.forEach(nome=>{
+    const isMe = nome === state.me;
+    tbody += `<tr><th class="${isMe?'me-row':''}">${nome}</th>`;
+    for (let d=1; d<=nDays; d++){
+      const weekend = isWeekend(state.anno, state.mese, d);
+      const today = isToday(state.anno, state.mese, d);
+      const codice = (state.turni[nome] && state.turni[nome][d]) || '';
+      const editable = isMe && !weekend;
+      const bg = codice ? codiceColor(codice) : (weekend ? '' : '');
+      const classes = ['cell'];
+      if (weekend) classes.push('weekend');
+      if (today) classes.push('today');
+      if (editable) classes.push('editable');
+      tbody += `<td class="${classes.join(' ')}"
+                    data-giorno="${d}"
+                    ${editable?'data-editable="1"':''}
+                    style="${bg?`background:${bg}`:''}">${codice}</td>`;
+    }
+    tbody += '</tr>';
+  });
+  tbody += '</tbody>';
+
+  table.innerHTML = thead + tbody;
+
+  if (state.me){
+    table.querySelectorAll('td[data-editable="1"]').forEach(td=>{
+      td.addEventListener('click', ()=> openSheet(parseInt(td.dataset.giorno,10)));
+    });
+  }
+}
+
+function setLoading(on){
+  document.body.style.opacity = on ? .6 : 1;
+}
+
+async function loadData(){
+  if (!CONFIG.API_URL || CONFIG.API_URL.indexOf('INSERISCI') !== -1){
+    $('#setupWarning').style.display = 'block';
+    return;
+  }
+  setLoading(true);
+  try{
+    const url = `${CONFIG.API_URL}?action=data&anno=${state.anno}&mese=${state.mese}&token=${encodeURIComponent(TOKEN)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    state.dipendenti = json.dipendenti;
+    state.codici = json.codici;
+    state.turni = json.turni;
+    state.me = json.me;
+    renderIdentBanner();
+    renderLegend();
+    renderGrid();
+  }catch(err){
+    showToast('Errore nel caricamento: ' + err.message, true);
+  }finally{
+    setLoading(false);
+  }
+}
+
+let activeDay = null;
+
+function openSheet(giorno){
+  activeDay = giorno;
+  const dataLabel = `${weekdayLabel(state.anno,state.mese,giorno)} ${giorno} ${MESI[state.mese-1]}`;
+  $('#sheetTitle').textContent = dataLabel;
+  $('#codeGrid').innerHTML = state.codici.map(c=>`
+    <div class="code-chip" data-codice="${c.codice}">
+      <span class="dot" style="background:${c.colore}"></span>${c.codice}
+    </div>
+  `).join('');
+  $('#codeGrid').querySelectorAll('.code-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=> salvaTurno(activeDay, chip.dataset.codice));
+  });
+  $('#backdrop').classList.add('open');
+  $('#sheet').classList.add('open');
+}
+
+function closeSheet(){
+  $('#backdrop').classList.remove('open');
+  $('#sheet').classList.remove('open');
+  activeDay = null;
+}
+$('#backdrop').addEventListener('click', closeSheet);
+$('#sheetClose').addEventListener('click', closeSheet);
+$('#clearBtn').addEventListener('click', ()=> salvaTurno(activeDay, ''));
+
+function updateCellUI(nome, giorno, codice){
+  const row = Array.from(document.querySelectorAll('tbody tr')).find(tr => tr.querySelector('th').textContent === nome);
+  if (!row) return;
+  const td = row.querySelector(`td[data-giorno="${giorno}"]`);
+  if (!td) return;
+  td.textContent = codice;
+  td.style.background = codice ? codiceColor(codice) : '';
+}
+
+async function salvaTurno(giorno, codice){
+  if (!state.me) return;
+  const prev = (state.turni[state.me] && state.turni[state.me][giorno]) || '';
+  state.turni[state.me][giorno] = codice;
+  updateCellUI(state.me, giorno, codice);
+  closeSheet();
+  try{
+    const res = await fetch(CONFIG.API_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'setTurno', token: TOKEN, anno: state.anno, mese: state.mese, giorno, codice })
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Errore di salvataggio');
+    showToast(codice ? 'Turno salvato' : 'Turno cancellato');
+  }catch(err){
+    state.turni[state.me][giorno] = prev;
+    updateCellUI(state.me, giorno, prev);
+    showToast('Errore: ' + err.message, true);
+  }
+}
+
+let toastTimer = null;
+function showToast(msg, isError){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 3000);
+}
+
+(function init(){
+  const now = new Date();
+  state.anno = now.getFullYear();
+  state.mese = now.getMonth()+1;
+  buildSelectors();
+  loadData();
+})();
+</script>
+</body>
+</html>
