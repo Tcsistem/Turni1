@@ -276,7 +276,7 @@ const GIORNI_SETT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const params = new URLSearchParams(location.search);
 const TOKEN = params.get('u') || '';
 
-const state = { anno:0, mese:0, dipendenti:[], codici:[], turni:{}, me:null };
+const state = { anno:0, mese:0, dipendenti:[], codici:[], turni:{}, me:null, isAdmin:false };
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -316,7 +316,10 @@ function codiceColor(codice){
 
 function renderIdentBanner(){
   const el = $('#identBanner');
-  if (state.me){
+  if (state.isAdmin){
+    el.className = 'ident-banner me';
+    el.innerHTML = `Accesso amministratore (<b>${state.me}</b>) — puoi modificare i turni di tutti i dipendenti.`;
+  } else if (state.me){
     el.className = 'ident-banner me';
     el.innerHTML = `Stai modificando i turni di <b>${state.me}</b> — tocca una tua cella per cambiare il turno.`;
   } else {
@@ -357,13 +360,14 @@ function renderGrid(){
       const weekend = isWeekend(state.anno, state.mese, d);
       const today = isToday(state.anno, state.mese, d);
       const codice = (state.turni[nome] && state.turni[nome][d]) || '';
-      const editable = isMe && !weekend;
-      const bg = codice ? codiceColor(codice) : (weekend ? '' : '');
+      const editable = state.isAdmin || (isMe && !weekend);
+      const bg = codice ? codiceColor(codice) : '';
       const classes = ['cell'];
       if (weekend) classes.push('weekend');
       if (today) classes.push('today');
       if (editable) classes.push('editable');
       tbody += `<td class="${classes.join(' ')}"
+                    data-nome="${nome}"
                     data-giorno="${d}"
                     ${editable?'data-editable="1"':''}
                     style="${bg?`background:${bg}`:''}">${codice}</td>`;
@@ -374,11 +378,9 @@ function renderGrid(){
 
   table.innerHTML = thead + tbody;
 
-  if (state.me){
-    table.querySelectorAll('td[data-editable="1"]').forEach(td=>{
-      td.addEventListener('click', ()=> openSheet(parseInt(td.dataset.giorno,10)));
-    });
-  }
+  table.querySelectorAll('td[data-editable="1"]').forEach(td=>{
+    td.addEventListener('click', ()=> openSheet(td.dataset.nome, parseInt(td.dataset.giorno,10)));
+  });
 }
 
 function setLoading(on){
@@ -400,6 +402,7 @@ async function loadData(){
     state.codici = json.codici;
     state.turni = json.turni;
     state.me = json.me;
+    state.isAdmin = json.isAdmin;
     renderIdentBanner();
     renderLegend();
     renderGrid();
@@ -411,10 +414,12 @@ async function loadData(){
 }
 
 let activeDay = null;
+let activeNome = null;
 
-function openSheet(giorno){
+function openSheet(nome, giorno){
   activeDay = giorno;
-  const dataLabel = `${weekdayLabel(state.anno,state.mese,giorno)} ${giorno} ${MESI[state.mese-1]}`;
+  activeNome = nome;
+  const dataLabel = `${weekdayLabel(state.anno,state.mese,giorno)} ${giorno} ${MESI[state.mese-1]}${state.isAdmin ? ' — ' + nome : ''}`;
   $('#sheetTitle').textContent = dataLabel;
   $('#codeGrid').innerHTML = state.codici.map(c=>`
     <div class="code-chip" data-codice="${c.codice}">
@@ -422,7 +427,7 @@ function openSheet(giorno){
     </div>
   `).join('');
   $('#codeGrid').querySelectorAll('.code-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=> salvaTurno(activeDay, chip.dataset.codice));
+    chip.addEventListener('click', ()=> salvaTurno(activeNome, activeDay, chip.dataset.codice));
   });
   $('#backdrop').classList.add('open');
   $('#sheet').classList.add('open');
@@ -432,10 +437,11 @@ function closeSheet(){
   $('#backdrop').classList.remove('open');
   $('#sheet').classList.remove('open');
   activeDay = null;
+  activeNome = null;
 }
 $('#backdrop').addEventListener('click', closeSheet);
 $('#sheetClose').addEventListener('click', closeSheet);
-$('#clearBtn').addEventListener('click', ()=> salvaTurno(activeDay, ''));
+$('#clearBtn').addEventListener('click', ()=> salvaTurno(activeNome, activeDay, ''));
 
 function updateCellUI(nome, giorno, codice){
   const row = Array.from(document.querySelectorAll('tbody tr')).find(tr => tr.querySelector('th').textContent === nome);
@@ -446,23 +452,24 @@ function updateCellUI(nome, giorno, codice){
   td.style.background = codice ? codiceColor(codice) : '';
 }
 
-async function salvaTurno(giorno, codice){
-  if (!state.me) return;
-  const prev = (state.turni[state.me] && state.turni[state.me][giorno]) || '';
-  state.turni[state.me][giorno] = codice;
-  updateCellUI(state.me, giorno, codice);
+async function salvaTurno(nome, giorno, codice){
+  if (!state.me || !nome) return;
+  if (!state.turni[nome]) state.turni[nome] = {};
+  const prev = state.turni[nome][giorno] || '';
+  state.turni[nome][giorno] = codice;
+  updateCellUI(nome, giorno, codice);
   closeSheet();
   try{
     const res = await fetch(CONFIG.API_URL, {
       method:'POST',
-      body: JSON.stringify({ action:'setTurno', token: TOKEN, anno: state.anno, mese: state.mese, giorno, codice })
+      body: JSON.stringify({ action:'setTurno', token: TOKEN, anno: state.anno, mese: state.mese, giorno, codice, dipendente: nome })
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Errore di salvataggio');
     showToast(codice ? 'Turno salvato' : 'Turno cancellato');
   }catch(err){
-    state.turni[state.me][giorno] = prev;
-    updateCellUI(state.me, giorno, prev);
+    state.turni[nome][giorno] = prev;
+    updateCellUI(nome, giorno, prev);
     showToast('Errore: ' + err.message, true);
   }
 }
