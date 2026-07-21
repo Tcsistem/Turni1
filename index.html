@@ -291,7 +291,8 @@
    dello script Apps Script (Distribuisci > Nuova implementazione)
    ========================================================= */
 const CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbx09hIHj8oyNsdqRU1lXK8i2Krq74ZPzOulkI2Svq7cNvRiGtmgBdLd-9QSR3Jp4algFA/exec' // es: https://script.google.com/macros/s/XXXX/exec
+  API_URL: 'https://script.google.com/macros/s/AKfycbx09hIHj8oyNsdqRU1lXK8i2Krq74ZPzOulkI2Svq7cNvRiGtmgBdLd-9QSR3Jp4algFA/exec' 
+  // es: https://script.google.com/macros/s/XXXX/exec
 };
 
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -542,8 +543,8 @@ async function exportPDF(){
     tableWrap.style.maxWidth = 'none';
 
     const table = document.querySelector('#grid');
-    const fullWidth  = table.scrollWidth;
-    const fullHeight = table.scrollHeight;
+    const fullWidth  = table.scrollWidth + 20;
+    const fullHeight = table.scrollHeight + 20;
 
     const canvas = await html2canvas(tableWrap, {
       scale: 2,
