@@ -291,7 +291,7 @@
    dello script Apps Script (Distribuisci > Nuova implementazione)
    ========================================================= */
 const CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbx09hIHj8oyNsdqRU1lXK8i2Krq74ZPzOulkI2Svq7cNvRiGtmgBdLd-9QSR3Jp4algFA/exec' // es: https://script.google.com/macros/s/XXXX/exec
+  API_URL: 'INSERISCI_QUI_URL_WEB_APP' // es: https://script.google.com/macros/s/XXXX/exec
 };
 
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -534,29 +534,49 @@ async function exportPDF(){
   const originalLabel = btn.textContent;
   btn.textContent = '...';
   try{
-    const target = document.querySelector('main');
-    const canvas = await html2canvas(target, {
+    // Espandi temporaneamente il contenitore scorrevole per catturare tutta la tabella
+    const tableWrap = document.querySelector('.table-wrap');
+    const prevOverflow = tableWrap.style.overflow;
+    const prevMaxWidth = tableWrap.style.maxWidth;
+    tableWrap.style.overflow = 'visible';
+    tableWrap.style.maxWidth = 'none';
+
+    const table = document.querySelector('#grid');
+    const fullWidth  = table.scrollWidth;
+    const fullHeight = table.scrollHeight;
+
+    const canvas = await html2canvas(tableWrap, {
       scale: 2,
-      backgroundColor: '#EEF1F6',
-      windowWidth: target.scrollWidth,
-      width: target.scrollWidth
+      backgroundColor: '#FFFFFF',
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      width: fullWidth,
+      height: fullHeight,
+      windowWidth: fullWidth,
+      windowHeight: fullHeight,
+      useCORS: true
     });
+
+    // Ripristina
+    tableWrap.style.overflow = prevOverflow;
+    tableWrap.style.maxWidth = prevMaxWidth;
+
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageWidth  = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
     doc.setFontSize(14);
     doc.setTextColor('#15202B');
     doc.text(`Turni — ${MESI[state.mese-1]} ${state.anno}`, 10, 12);
 
-    let imgWidthMM = pageWidth - 20;
+    let imgWidthMM  = pageWidth - 20;
     let imgHeightMM = (canvas.height * imgWidthMM) / canvas.width;
-    const maxHeightMM = pageHeight - 26;
-    if (imgHeightMM > maxHeightMM){
-      imgHeightMM = maxHeightMM;
-      imgWidthMM = (canvas.width * imgHeightMM) / canvas.height;
+    const maxH = pageHeight - 26;
+    if (imgHeightMM > maxH){
+      imgHeightMM = maxH;
+      imgWidthMM  = (canvas.width * imgHeightMM) / canvas.height;
     }
     const x = (pageWidth - imgWidthMM) / 2;
     doc.addImage(imgData, 'PNG', x, 18, imgWidthMM, imgHeightMM);
